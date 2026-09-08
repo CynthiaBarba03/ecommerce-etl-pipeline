@@ -1,0 +1,62 @@
+services:
+
+  postgres:
+    image: postgres:15
+    container_name: ecommerce-warehouse
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: dataeng
+      POSTGRES_PASSWORD: dataeng123
+      POSTGRES_DB: retail_warehouse
+    volumes:
+      - ecommerce_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dataeng"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: ecommerce-pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  airflow:
+    build: .
+    image: ecommerce-pipeline-airflow
+    container_name: ecommerce-airflow
+    ports:
+      - "8080:8080"
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://dataeng:dataeng123@postgres:5432/retail_warehouse
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
+      MINIO_ENDPOINT: "http://minio:9000"
+      PG_HOST: "postgres"
+      PG_PORT: "5432"
+      API_BASE_URL: "https://ecommerce-dirty-data-api.onrender.com"
+      AZURE_STORAGE_CONNECTION_STRING: "DefaultEndpointsProtocol=https;AccountName=stecommercedirty01;AccountKey=BIb83z3ZWAMAFjKXeqsyFwbYg1sepZapvx0/Jfh7kTVP2+pbkH1d//c1VlfbEPpw8IIECGCkrZbd+AStu3gHCA==;EndpointSuffix=core.windows.net"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./extraccion:/opt/airflow/extraccion
+      - ./transformacion:/opt/airflow/transformacion
+      - ./carga:/opt/airflow/carga
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: bash -c "airflow db init && airflow users create --username admin --password admin123 --firstname Admin --lastname User --role Admin --email admin@admin.com || true && airflow webserver & airflow scheduler"
+    restart: unless-stopped
+
+volumes:
+  ecommerce_pgdata:

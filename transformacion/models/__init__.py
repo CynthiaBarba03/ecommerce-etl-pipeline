@@ -1,0 +1,3 @@
+from .customer import CUSTOMER_SCHEMA, CLEANING_RULES
+
+__all__ = ["CUSTOMER_SCHEMA", "CLEANING_RULES"]

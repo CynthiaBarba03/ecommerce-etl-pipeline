@@ -1,5 +1,24 @@
-.env
+# Entornos virtuales
 .venv/
+.venv.12/
+
+# Archivos sensibles
+.env
+.databrickscfg
+*.key
+*.pem
+secrets/
+
+# Python
 __pycache__/
 *.pyc
-.databricks
+*.pyo
+
+# Databricks
+.databricks/
+.dbsql/
+.bundle/
+
+# Logs y temporales
+*.log
+_*.py

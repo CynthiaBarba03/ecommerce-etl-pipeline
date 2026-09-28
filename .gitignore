@@ -21,4 +21,5 @@ __pycache__/
 
 # Logs y temporales
 *.log
-_*.py
+.pytest_cache/
+.ipynb_checkpoints/

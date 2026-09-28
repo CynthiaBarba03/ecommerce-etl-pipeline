@@ -10,7 +10,7 @@ PROPÓSITO:
 
 from pyspark.sql import functions as F, DataFrame
 
-from transformacion.cleaning.customer_cleaner import clean_text_column, clean_date_columns
+from transformacion.cleaning.common import clean_text_column, clean_date_columns
 from transformacion.utils.date_utils import add_audit_timestamps
 from transformacion.utils.cast_utils import cast_schema
 from transformacion.models.inventory import (

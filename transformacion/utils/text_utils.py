@@ -177,3 +177,11 @@ def remove_special_chars(col: Column, keep_chars: str = "") -> Column:
     # Escapamos los caracteres especiales de regex para que no rompan el patrón
     pattern = f"[^a-zA-Z\\s{keep_chars}]"
     return F.regexp_replace(col, pattern, "")
+
+
+def strip_html_tags(col: Column) -> Column:
+    """
+    Elimina etiquetas HTML (ej: <p>, </div>, <br/>) del texto.
+    """
+    return F.regexp_replace(col, r"<[^>]+>", "")
+

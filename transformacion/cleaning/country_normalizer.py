@@ -75,8 +75,8 @@ def _build_country_lookup_table(spark: SparkSession) -> DataFrame:
         if hasattr(country, "official_name"):
             lookup[country.official_name.upper()] = country.name
 
-    # Agregar aliases manuales (sobrescriben si hay conflicto)
-    lookup.update(COUNTRY_ALIASES)
+    # Agregar aliases manuales (claves en UPPER para matchear el lookup key)
+    lookup.update({k.upper(): v for k, v in COUNTRY_ALIASES.items()})
 
     # Convertir el diccionario a DataFrame de Spark
     # [(clave, valor), (clave, valor), ...] → DataFrame

@@ -23,10 +23,28 @@ FLUJO:
     Salida:   { "customers": df_limpio, ... }
 """
 
-from transformacion.cleaning.customer_cleaner import run_customer_cleaning
-from transformacion.cleaning.coupon_cleaner import run_coupon_cleaning
 from transformacion.cleaning.category_cleaner import run_category_cleaning
+from transformacion.cleaning.coupon_cleaner import run_coupon_cleaning
+from transformacion.cleaning.customer_cleaner import run_customer_cleaning
 from transformacion.cleaning.inventory_cleaner import run_inventory_cleaning
+from transformacion.cleaning.payment_cleaner import run_payment_cleaning
+from transformacion.cleaning.product_cleaner import run_product_cleaning
+from transformacion.cleaning.review_cleaner import run_review_cleaning
+from transformacion.cleaning.shipping_cleaner import run_shipping_cleaning
+from transformacion.cleaning.supplier_cleaner import run_supplier_cleaning
+
+
+CLEANERS = {
+    "customers": run_customer_cleaning,
+    "coupons": run_coupon_cleaning,
+    "categories": run_category_cleaning,
+    "inventory": run_inventory_cleaning,
+    "payments": run_payment_cleaning,
+    "products": run_product_cleaning,
+    "reviews": run_review_cleaning,
+    "shipping": run_shipping_cleaning,
+    "suppliers": run_supplier_cleaning,
+}
 
 
 def run_transformacion(dataframes: dict, spark) -> dict:
@@ -42,44 +60,12 @@ def run_transformacion(dataframes: dict, spark) -> dict:
         Diccionario con DataFrames limpios.
         Mismas claves que la entrada, pero con datos transformados.
     """
-    # Usamos un diccionario separado para los resultados limpios
-    # (no modificamos el original, buena práctica para debugging)
     dataframes_clean = {}
-
-    # === CUSTOMERS ===
-    if "customers" in dataframes:
-        print("▶️  Transformando: customers...")
-        dataframes_clean["customers"] = run_customer_cleaning(
-            dataframes["customers"],
-            spark
-        )
-        print("✅ customers completado.")
-
-    # === COUPONS ===
-    if "coupons" in dataframes:
-        print("▶️  Transformando: coupons...")
-        dataframes_clean["coupons"] = run_coupon_cleaning(
-            dataframes["coupons"],
-            spark
-        )
-        print("✅ coupons completado.")
-
-    # === CATEGORIES ===
-    if "categories" in dataframes:
-        print("▶️  Transformando: categories...")
-        dataframes_clean["categories"] = run_category_cleaning(
-            dataframes["categories"],
-            spark
-        )
-        print("✅ categories completado.")
-
-    # === INVENTORY ===
-    if "inventory" in dataframes:
-        print("▶️  Transformando: inventory...")
-        dataframes_clean["inventory"] = run_inventory_cleaning(
-            dataframes["inventory"],
-            spark
-        )
-        print("✅ inventory completado.")
+    for entity_name, cleaner in CLEANERS.items():
+        if entity_name not in dataframes:
+            continue
+        print(f"Transformando: {entity_name}...")
+        dataframes_clean[entity_name] = cleaner(dataframes[entity_name], spark)
+        print(f"{entity_name} completado.")
 
     return dataframes_clean

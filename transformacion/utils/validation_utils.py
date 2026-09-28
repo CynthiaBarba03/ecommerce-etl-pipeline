@@ -144,8 +144,11 @@ def is_valid_date(col: Column, date_format: str = "yyyy-MM-dd") -> Column:
     RETORNA:
         Column de tipo BooleanType: True si es una fecha válida
     """
-    # to_date() retorna null si no puede parsear → lo usamos como detector
-    parsed = F.to_date(col, date_format)
+    # try_to_date retorna null si no puede parsear → lo usamos como detector.
+    # OJO: usamos _safe_to_date porque con ANSI mode (Databricks por defecto)
+    # F.to_date LANZA DateTimeException en vez de devolver null.
+    from transformacion.utils.date_utils import _safe_to_date
+    parsed = _safe_to_date(col, date_format)
     return (
         col.isNotNull() &
         (F.trim(col) != "") &

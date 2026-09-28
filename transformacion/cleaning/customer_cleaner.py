@@ -171,26 +171,40 @@ def clean_date_columns(df: DataFrame, date_columns: list) -> DataFrame:
     """
     Estandariza varias columnas de fecha al formato ISO "yyyy-MM-dd".
 
-    POR QUÉ UNA FUNCIÓN PARA TODAS LAS FECHAS:
-        En vez de llamar format_date_to_iso() para cada columna por separado,
-        esta función acepta una lista y las procesa todas de una vez.
-        Más limpio, más mantenible.
+    CREA columnas NUEVAS con sufijo "_clean" (NO reemplaza las originales):
+        created_at        → valor original (tal como vino de la API)
+        created_at_clean  → valor estandarizado "yyyy-MM-dd" (DateType)
+
+    Esto permite comparar ANTES vs DESPUÉS lado a lado.
+
+    CÓMO FORMATEA:
+        Intenta parsear la fecha con ~20 formatos conocidos hasta encontrar
+        el que coincida. Ejemplos:
+            "01/05/2024"           → 2024-01-05
+            "January 5, 2024"      → 2024-01-05
+            "2024-01-05T14:30:00"  → 2024-01-05
+            "20240105"             → 2024-01-05
+
+        Si NO se puede parsear (basura, texto que no es fecha) → null.
 
     PARÁMETROS:
         df:           DataFrame de PySpark
         date_columns: Lista de nombres de columnas con fechas
 
     RETORNA:
-        DataFrame con las columnas de fecha estandarizadas (reemplaza las originales)
+        DataFrame con columnas "{col}_clean" añadidas (DateType)
 
     EJEMPLO:
         df = clean_date_columns(df, ["created_at", "updated_at", "registration_date"])
+        # Crea: created_at_clean, updated_at_clean, registration_date_clean
     """
+    from transformacion.utils.date_utils import parse_date
+
     for col_name in date_columns:
         if col_name in df.columns:
             df = df.withColumn(
-                col_name,
-                format_date_to_iso(F.col(col_name))
+                f"{col_name}_clean",
+                parse_date(F.col(col_name))
             )
         else:
             print(f"⚠️  Columna de fecha '{col_name}' no encontrada. Se omite.")

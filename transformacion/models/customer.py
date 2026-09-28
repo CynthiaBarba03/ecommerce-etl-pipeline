@@ -75,9 +75,11 @@ CLEANING_RULES = {
 # Después de limpiar los strings, convertimos al tipo correcto.
 # Formato: { "nombre_columna": "tipo_destino" }
 # Los tipos soportados están en cast_utils.py
+#
+# NOTA: Las fechas NO van aquí porque clean_date_columns() ya crea
+# las columnas "{col}_clean" directamente como DateType.
+# Las columnas originales de fecha se conservan como string crudo
+# para poder comparar ANTES vs DESPUÉS.
 CUSTOMER_TYPE_MAP = {
-    "id":                "int",
-    "created_at":        "date",    # yyyy-MM-dd → DateType
-    "updated_at":        "date",
-    "registration_date": "date",
+    "id": "int",
 }

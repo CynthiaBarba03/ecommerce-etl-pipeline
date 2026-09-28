@@ -35,12 +35,39 @@ from pyspark.sql import Column
 from typing import List
 
 
+def _safe_to_date(col: Column, date_format: str) -> Column:
+    """
+    to_date SEGURO para entornos con ANSI mode activado (Databricks lo activa
+    por defecto desde DBR 14+).
+
+    ¿POR QUÉ EXISTE ESTA FUNCIÓN?
+        Con ANSI mode ON, F.to_date() LANZA DateTimeException cuando el valor
+        no coincide con el formato, en vez de devolver null.
+
+        Ejemplo del bug que resuelve:
+            to_date("2022-07-31", "MM/dd/yyyy")
+            → ANSI OFF:  null            (falla silenciosamente, bien)
+            → ANSI ON:   DateTimeException (¡explota!)
+
+        try_to_date (Spark 3.5+) siempre devuelve null si no puede parsear.
+
+    RETORNA:
+        Column DateType, null si no se puede parsear (NUNCA lanza excepción)
+    """
+    if hasattr(F, "try_to_date"):
+        # Spark 3.5+ / Databricks DBR 14+: versión segura
+        return F.try_to_date(col, date_format)
+    # Fallback para versiones antiguas de Spark
+    return F.to_date(col, date_format)
+
+
 # Formatos que sabemos que pueden venir en los datos crudos del ecommerce.
 # PySpark intentará cada uno en orden hasta que alguno funcione.
 KNOWN_DATE_FORMATS: List[str] = [
     "yyyy-MM-dd",           # Estándar ISO: 2024-01-05
     "yyyy-MM-dd HH:mm:ss",  # ISO con hora: 2024-01-05 14:30:00
     "yyyy-MM-dd'T'HH:mm:ss",# ISO 8601 con T: 2024-01-05T14:30:00
+    "yyyy-MM-dd HH:mm:ss.SSS",  # ISO con milisegundos: 2024-01-05 14:30:00.123
     "MM/dd/yyyy",           # Americano: 01/05/2024
     "dd/MM/yyyy",           # Europeo: 05/01/2024
     "MM-dd-yyyy",           # Americano con guión: 01-05-2024
@@ -48,6 +75,18 @@ KNOWN_DATE_FORMATS: List[str] = [
     "yyyy/MM/dd",           # Asiático: 2024/01/05
     "d/M/yyyy",             # Sin ceros: 5/1/2024
     "M/d/yyyy",             # Sin ceros americano: 1/5/2024
+    # === Formatos adicionales (más cobertura, menos nulls) ===
+    "yyyy.MM.dd",           # Con punto: 2024.01.05
+    "dd.MM.yyyy",           # Europeo con punto: 05.01.2024
+    "MM.dd.yyyy",           # Americano con punto: 01.05.2024
+    "dd/MM/yyyy HH:mm:ss",  # Europeo con hora: 05/01/2024 14:30:00
+    "MM/dd/yyyy HH:mm:ss",  # Americano con hora: 01/05/2024 14:30:00
+    "yyyyMMdd",             # Compacto: 20240105
+    "MMMM d, yyyy",         # Mes en inglés: January 5, 2024
+    "MMM d, yyyy",          # Mes corto en inglés: Jan 5, 2024
+    "d MMMM yyyy",          # 5 January 2024
+    "d MMM yyyy",           # 5 Jan 2024
+    "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",  # ISO con Z: 2024-01-05T14:30:00.000Z
 ]
 
 # El formato de salida estándar que usamos siempre
@@ -84,8 +123,8 @@ def parse_date(col: Column, input_format: str = None) -> Column:
             → Parsea específicamente ese formato
     """
     if input_format:
-        # Si nos dijeron el formato exacto, lo usamos directamente
-        return F.to_date(col, input_format)
+        # Si nos dijeron el formato exacto, lo usamos directamente (versión segura)
+        return _safe_to_date(col, input_format)
 
     # Si no conocemos el formato, probamos todos los formatos conocidos
     # Construimos una cadena de CASE WHEN: si el primero falla, intenta el siguiente
@@ -94,7 +133,7 @@ def parse_date(col: Column, input_format: str = None) -> Column:
 
     # Iteramos de atrás hacia adelante para que el primero de la lista tenga prioridad
     for fmt in reversed(KNOWN_DATE_FORMATS):
-        parsed = F.to_date(col, fmt)
+        parsed = _safe_to_date(col, fmt)  # ← seguro con ANSI mode
         # Si el intento anterior dio null, usamos este; si no, mantenemos el anterior
         result = F.when(result.isNull(), parsed).otherwise(result)
 

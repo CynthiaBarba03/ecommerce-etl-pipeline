@@ -139,9 +139,10 @@ def safe_cast_date(df: DataFrame, col_name: str, date_format: str = "yyyy-MM-dd"
         "2024-1-5"   → null                  ❌ (falta el cero, formato incorrecto)
         "abc"        → null                  ❌
     """
+    from transformacion.utils.date_utils import _safe_to_date
     return df.withColumn(
         col_name,
-        F.to_date(F.col(col_name), date_format)
+        _safe_to_date(F.col(col_name), date_format)
     )
 
 

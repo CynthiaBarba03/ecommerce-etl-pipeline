@@ -34,7 +34,7 @@ POR QUÉ IMPORTA EL TIPO CORRECTO:
 
 from pyspark.sql import functions as F
 from pyspark.sql import DataFrame, Column
-from pyspark.sql.types import IntegerType, LongType, DoubleType, DateType
+from pyspark.sql.types import IntegerType, LongType, DoubleType, DateType, BooleanType
 
 
 def safe_cast_int(df: DataFrame, col_name: str, null_replacement: int = None) -> DataFrame:
@@ -146,6 +146,30 @@ def safe_cast_date(df: DataFrame, col_name: str, date_format: str = "yyyy-MM-dd"
     )
 
 
+def safe_cast_bool(df: DataFrame, col_name: str, default: bool = False) -> DataFrame:
+    """
+    Convierte una columna string a BooleanType de forma segura.
+
+    Soporta representaciones comunes:
+        - True:  '1', 'true', 'yes', 't', 'y', 'si', 's'
+        - False: '0', 'false', 'no', 'f', 'n'
+        - Nulos o valores no reconocidos se convierten al valor default (por defecto False).
+
+    PARÁMETROS:
+        df:       DataFrame de PySpark
+        col_name: Nombre de la columna
+        default:  Valor booleano por defecto para valores nulos o desconocidos
+    """
+    val = F.lower(F.trim(F.col(col_name)))
+    col = (
+        F.when(val.isin("1", "true", "yes", "t", "y", "si", "s"), F.lit(True))
+        .when(val.isin("0", "false", "no", "f", "n"), F.lit(False))
+        .otherwise(F.lit(default))
+        .cast(BooleanType())
+    )
+    return df.withColumn(col_name, col)
+
+
 def cast_schema(df: DataFrame, schema_map: dict) -> DataFrame:
     """
     Aplica un mapa de conversiones de tipos a múltiples columnas a la vez.
@@ -159,7 +183,7 @@ def cast_schema(df: DataFrame, schema_map: dict) -> DataFrame:
         df:         DataFrame de PySpark
         schema_map: Diccionario donde la clave es el nombre de la columna
                     y el valor es el tipo destino como string:
-                    "int", "long", "double", "date"
+                    "int", "long", "double", "date", "bool"
 
     EJEMPLO DE USO:
         schema_map = {
@@ -167,6 +191,7 @@ def cast_schema(df: DataFrame, schema_map: dict) -> DataFrame:
             "price":             "double",
             "quantity":          "int",
             "registration_date": "date",
+            "is_active":         "bool",
         }
         df = cast_schema(df, schema_map)
 
@@ -178,6 +203,7 @@ def cast_schema(df: DataFrame, schema_map: dict) -> DataFrame:
         "long":   lambda d, col: safe_cast_long(d, col),
         "double": lambda d, col: safe_cast_double(d, col),
         "date":   lambda d, col: safe_cast_date(d, col),
+        "bool":   lambda d, col: safe_cast_bool(d, col),
     }
 
     for col_name, target_type in schema_map.items():

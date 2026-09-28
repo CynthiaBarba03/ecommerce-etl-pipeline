@@ -1,47 +1,38 @@
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType, TimestampType
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType
 
 CUSTOMER_SCHEMA = StructType([
-    StructField("customer_id", IntegerType(), False),
-    StructField("first_name", StringType(), True),
-    StructField("last_name", StringType(), True),
+    StructField("id", IntegerType(), False),
+    StructField("name", StringType(), True),
     StructField("email", StringType(), True),
-    StructField("country", StringType(), True),
-    StructField("city", StringType(), True),
-    StructField("state", StringType(), True),
-    StructField("zip_code", StringType(), True),
     StructField("phone", StringType(), True),
-    StructField("date_joined", TimestampType(), True),
+    StructField("city", StringType(), True),
+    StructField("country", StringType(), True),
+    StructField("created_at", StringType(), True),
+    StructField("updated_at", StringType(), True),
+    StructField("registration_date", StringType(), True),
+    StructField("ingestion_date", StringType(), True),
 ])
 
 CLEANING_RULES = {
-    "first_name": {
+    "name": {
         "remove_special_chars": True,
         "keep_apostrophe": True,
         "keep_hyphen": True,
         "strip_whitespace": True,
         "null_replacement": "UNKNOWN",
         "capitalize": True,
-    },
-    "last_name": {
-        "remove_special_chars": True,
-        "keep_apostrophe": True,
-        "keep_hyphen": True,
-        "strip_whitespace": True,
-        "null_replacement": "UNKNOWN",
-        "capitalize": True,
-    },
-    "email": {
-        "strip_whitespace": True,
-        "lowercase": True,
-        "null_replacement": "UNKNOWN",
-    },
-    "country": {
-        "strip_whitespace": True,
-        "null_replacement": "UNKNOWN",
     },
     "city": {
         "strip_whitespace": True,
         "null_replacement": "UNKNOWN",
         "capitalize": True,
+    },
+    "country": {
+        "strip_whitespace": True,
+        "null_replacement": "UNKNOWN",
+    },
+    "phone": {
+        "strip_whitespace": True,
+        "null_replacement": "UNKNOWN",
     },
 }
